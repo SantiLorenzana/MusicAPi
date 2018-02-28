@@ -5,11 +5,11 @@ class Model_Users extends Orm\Model
     protected static $_table_name = 'usuarios';
     protected static $_primary_key = array('id');
     protected static $_properties = array(
-        'id', // both validation & typing observers will ignore the PK
-        'username' => array(
+        'id', 
+        'usuario' => array(
             'data_type' => 'varchar'   
         ),
-        'password' => array(
+        'contraseña' => array(
             'data_type' => 'varchar'   
         ),
         'email' => array(
@@ -24,7 +24,7 @@ class Model_Users extends Orm\Model
         'descripcion' => array(
             'data_type' => 'varchar'   
         ),
-        'cumple' => array(
+        'cumpleaños' => array(
             'data_type' => 'varchar'   
         ),
         'coordenada_x' => array(

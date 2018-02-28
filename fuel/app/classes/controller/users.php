@@ -35,14 +35,13 @@ class Controller_Users extends Controller_Rest
             $users = Model_Users::find('all');
 
             if (empty($users)) {
-                $input = $_POST;
                 $user = new Model_Users();
                 $user->username = 'admin';
                 $user->email = 'admin@admin.com';
                 $user->password = '1234';
-                $user->id_device = $input['id_device'];
-                $user->coordenada_x = $input['coordenada_x'];
-                $user->coordenada_y = $input['coordenada_y'];
+                $user->id_device = 0;
+                $user->coordenada_x = 0;
+                $user->coordenada_y = 0;
                 $user->id_rol = 1;
                 $user->save();
                 $json = $this->response(array(
@@ -100,24 +99,35 @@ class Controller_Users extends Controller_Rest
             
             //Validación usuario
             if (!empty($users)) {
-               //Generar token
-                $token = array(
-                    'id'  => $users['id'],
-                    'username' => $_GET['username'],
-                    'password' => $_GET['password'],
-                );
-            
-            $jwt = JWT::encode($token, $this->key);
+                if($users->id_rol == 1){
+                   //Generar token
+                    $token = array(
+                        'id'  => $users['id'],
+                        'username' => $_GET['username'],
+                        'password' => $_GET['password'],
+                    );
+                
+                $jwt = JWT::encode($token, $this->key);
 
-            $json = $this->response(array(
-                    'code' => 201,
-                    'message' => 'usuario logeado',
-                    'data' => array(
-                        'token' => $jwt,
-                        'username' => $token['username']   
-                    )
-                ));
-            return $json;
+                $json = $this->response(array(
+                        'code' => 201,
+                        'message' => 'usuario logeado',
+                        'data' => array(
+                            'token' => $jwt,
+                            'username' => $token['username']   
+                        )
+                    ));
+                return $json;
+                }
+                else
+                {
+                    $json = $this->response(array(
+                        'code' => 401,
+                        'message' => 'Acceso denegado. Debes acceder con un usuario administrador',
+                        'data' => null  
+                    ));
+                return $json;
+                }
             }
             else
             {
@@ -525,6 +535,78 @@ class Controller_Users extends Controller_Rest
                 'code' => 502,
                 'message' => $e->getMessage(),
                 'data' => $user
+            ));
+
+            return $json;
+        }
+    }
+
+    public function post_modify()
+    {
+        try
+        {
+            $token = apache_request_headers()['Authorization'];
+
+            if ($this->authorization($token) == true){
+               
+                $decoded = JWT::decode($token, $this->key, array('HS256'));
+                $id = $decoded->id;
+                $user = Model_Users::find($id);
+
+                if (!empty($_POST['foto_perfil']) and !empty($_POST['password']) or
+                    !empty($_POST['foto_perfil']) and isset($_POST['password']) or
+                    isset($_POST['foto_perfil']) and !empty($_POST['password']))
+                {
+                    //Guardar foto
+                    if (isset($_POST['foto_perfil']) && !empty($_POST['foto_perfil']))
+                    {
+                        $user->foto_perfil = $_POST['foto_perfil'];
+                        $user->save();
+                    }
+                    //Guardar contraseña
+                    if (isset($_POST['password']) && !empty($_POST['password']))
+                    {
+                        $user->password = $_POST['password'];
+                        $user->save();
+                    }
+                    
+
+                    $json = $this->response(array(
+                    'code' => 200,
+                    'message' => 'Usuario modificado correctamente',
+                    'data' => $user
+                    ));
+
+                    return $json;
+                }
+                else
+                {
+                $json = $this->response(array(
+                    'code' => 400,
+                    'message' => 'Todos los parametros vacios',
+                    'data' => $user
+                ));
+
+                return $json;
+                }
+            }
+            else
+            {
+                $json = $this->response(array(
+                    'code' => 401,
+                    'message' => 'Token incorrecto, no tienes permiso',
+                    'data' => null
+                ));
+
+                return $json;
+            }
+        } 
+        catch (Exception $e) 
+        {
+            $json = $this->response(array(
+                'code' => 501,
+                'message' => $e->getMessage(),
+                'data' => null
             ));
 
             return $json;

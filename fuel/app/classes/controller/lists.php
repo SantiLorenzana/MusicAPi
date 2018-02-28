@@ -2,7 +2,7 @@
 
 use Firebase\JWT\JWT;
 
-class Controller_Songs extends Controller_Rest
+class Controller_Lists extends Controller_Rest
 {
     private $key = '53jDgdTf5efGH54efef978';
 
@@ -13,7 +13,7 @@ class Controller_Songs extends Controller_Rest
 
         $userId = $decoded->id;
 
-        $users = Model_users::find('all', array(
+        $users = Model_Users::find('all', array(
                 'where' => array(
                     array('id', $userId)
                 ),
@@ -28,7 +28,7 @@ class Controller_Songs extends Controller_Rest
         }
     }
     
-    public function post_createSong()
+    public function post_createList()
     {
          try
         {
@@ -40,19 +40,15 @@ class Controller_Songs extends Controller_Rest
                 $id = $decoded->id;
                 $user = Model_Users::find($id);
 
-                if($user->id_rol == 1){
+                if($user->id_rol != 1){
 
                     if ( !isset($_POST['titulo']) or
-                      !isset($_POST['url']) or
-                      !isset($_POST['artista']) or
-                     $_POST['titulo'] == "" or
-                     $_POST['url'] == "" or
-                     $_POST['artista'] == "")
+                     $_POST['titulo'] == "")
                     {
 
                     $json = $this->response(array(
                         'code' => 400,
-                        'message' => 'parametros incorrectos/Los campos no pueden estar vacios',
+                        'message' => 'Introduce el titulo de la lista',
                         'data' => null
                     ));
 
@@ -60,46 +56,29 @@ class Controller_Songs extends Controller_Rest
                     }
 
                     //Validar titulo no existe
-                    $songName = Model_Songs::find('all', array(
+                    $listName = Model_Lists::find('all', array(
                         'where' => array(
                             array('titulo', $_POST['titulo']),
                         ),
                     ));
 
-                    if (! empty($songName)) {
+                    if (! empty($listName)) {
                        $json = $this->response(array(
                             'code' => 400,
-                            'message' => 'Ya existe una cancion con este titulo',
+                            'message' => 'Ya existe una lista con este titulo',
                             'data' => null
                         ));
                        return $json;
                     }
 
-                    //Validar titulo no existe
-                    $songUrl = Model_Songs::find('all', array(
-                        'where' => array(
-                            array('url', $_POST['url']),
-                        ),
-                    ));
-
-                    if (! empty($songUrl)) {
-                       $json = $this->response(array(
-                            'code' => 400,
-                            'message' => 'Ya existe una cancion con esta url',
-                            'data' => null
-                        ));
-                       return $json;
-                    }
-
-                    $song = new Model_Songs();
-                    $song->titulo = $_POST['titulo'];
-                    $song->url = $_POST['url'];
-                    $song->artista = $_POST['artista'];
-                    $song->reproducciones = 0;
-                    $song->save();
+                    $list = new Model_Lists();
+                    $list->titulo = $_POST['titulo'];
+                    $list->editable = 1;
+                    $list->id_usuario = $id;
+                    $list->save();
                     $json = $this->response(array(
                        'code' => 202,
-                       'message' => 'cancion creada',
+                       'message' => 'lista creada',
                         'data' => null
                     ));
 
@@ -109,7 +88,7 @@ class Controller_Songs extends Controller_Rest
                 {
                     $json = $this->response(array(
                     'code' => 400,
-                    'message' => 'No tienes permiso para añadir canciones, necesitas ser administrador',
+                    'message' => 'El usuario adminstrador no tiene acceso a esta funcionalidad',
                     'data' => null
                     ));
 
@@ -139,7 +118,7 @@ class Controller_Songs extends Controller_Rest
         }
     }
 
-    public function post_deleteSong()
+    public function post_deleteList()
     {
          try
         {
@@ -152,7 +131,7 @@ class Controller_Songs extends Controller_Rest
                 $user = Model_Users::find($id);
 
 
-                if($user->id_rol == 1)
+                if($user->id_rol != 1)
                 {
                      if ( !isset($_POST['id']) or
                      $_POST['id'] == "")
@@ -160,40 +139,53 @@ class Controller_Songs extends Controller_Rest
 
                     $json = $this->response(array(
                         'code' => 400,
-                        'message' => 'Introduce id de la canción',
+                        'message' => 'Introduce id de la lista',
                         'data' => null
                     ));
 
                     return $json;
                     }
 
-                    $song = Model_Songs::find('first', array(
+                    $list = Model_Lists::find('first', array(
                         'where' => array(
                             array('id', $_POST['id']),
                         ),
                     ));
-                    if (empty($song)) {
+
+                    if (empty($list)) {
                        $json = $this->response(array(
                             'code' => 403,
-                            'message' => 'No existe ninguna cancion con ese id',
+                            'message' => 'No existe ninguna lista con ese id',
                             'data' => null
                         ));
                         return $json;
                     } else {
-                        $song->delete();
-                        $json = $this->response(array(
-                            'code' => 201,
-                            'message' => 'cancion borrada',
-                            'data' => null
-                        ));
-                        return $json;
+                        if($list->id_usuario == $id)
+                        {
+                            $list->delete();
+                            $json = $this->response(array(
+                                'code' => 201,
+                                'message' => 'lista borrada',
+                                'data' => null
+                            ));
+                            return $json;
+                        }
+                        else
+                        {
+                            $json = $this->response(array(
+                                'code' => 400,
+                                'message' => 'No puedes borrar listas de otros usuarios',
+                                'data' => null
+                            ));
+                            return $json;
+                        }
                     }
                 }
                 else
                 {
                     $json = $this->response(array(
                         'code' => 400,
-                        'message' => 'No tienes permiso para borrar canciones, accede con un usuario adminitrador',
+                        'message' => 'El usuario adminstrador no tiene acceso a esta funcionalidad',
                         'data' => null
                     ));
                     return $json;
@@ -224,7 +216,7 @@ class Controller_Songs extends Controller_Rest
         }
     }
 
-    public function get_getSongs()
+    public function get_getLists()
     {
         try {
             $token = apache_request_headers()['Authorization'];
@@ -235,12 +227,16 @@ class Controller_Songs extends Controller_Rest
                 $decoded = JWT::decode($token, $this->key, array('HS256'));
                 $id = $decoded->id;
 
-                $songs = Model_Songs::find('all');
+                $lists = Model_Lists::find('first', array(
+                        'where' => array(
+                            array('id_usuario', $id),
+                        ),
+                    ));
 
                 $json = $this->response(array(
                     'code' => 200,
-                    'message' => 'Canciones mostradas',
-                    'data' => $songs
+                    'message' => 'Listas mostradas',
+                    'data' => $lists
                 ));
 
                 return $json;
@@ -267,7 +263,7 @@ class Controller_Songs extends Controller_Rest
         }
     }
 
-    public function post_playSong()
+    public function post_addSongToList()
     {
          try
         {
@@ -282,39 +278,90 @@ class Controller_Songs extends Controller_Rest
 
                 if($user->id_rol != 1)
                 {
-                     if ( !isset($_POST['id']) or
-                     $_POST['id'] == "")
+                     
+                    if ( !isset($_POST['lista']) or
+                      !isset($_POST['cancion']) or
+                     $_POST['lista'] == "" or
+                     $_POST['cancion'] == "")
                     {
 
                     $json = $this->response(array(
                         'code' => 400,
-                        'message' => 'Introduce id de la canción',
+                        'message' => 'parametros incorrectos/Los campos no pueden estar vacios',
                         'data' => null
                     ));
 
                     return $json;
                     }
 
-                    $song = Model_Songs::find('first', array(
+                    //Validar lista existe
+                    $list = Model_Lists::find('first', array(
                         'where' => array(
-                            array('id', $_POST['id']),
+                            array('titulo', $_POST['lista']),
                         ),
                     ));
+
+                    if (empty($list)) {
+                       $json = $this->response(array(
+                            'code' => 400,
+                            'message' => 'No existe una lista con ese titulo',
+                            'data' => null
+                        ));
+                       return $json;
+                    } 
+                    else if($list->id_usuario != $id)
+                    {
+                        $json = $this->response(array(
+                            'code' => 400,
+                            'message' => 'No puedes añadir canciones a listas de otros usuarios',
+                            'data' => null
+                        ));
+                       return $json;
+                    }
+
+                    //Validar cancion existe
+                    $song = Model_Songs::find('first', array(
+                        'where' => array(
+                            array('titulo', $_POST['cancion']),
+                        ),
+                    ));
+
                     if (empty($song)) {
                        $json = $this->response(array(
-                            'code' => 403,
-                            'message' => 'No existe ninguna cancion con ese id',
+                            'code' => 400,
+                            'message' => 'No existe una cancion con ese titulo',
                             'data' => null
                         ));
-                        return $json;
-                    } else {
-                        $song->reproducciones = $song->reproducciones + 1;
-                        $song->save();
+                       return $json;
+                    }
+
+                    $contiene = Model_Contiene::find('first', array(
+                        'where' => array(
+                            array('id_lista', $list->id),
+                            array('id_cancion', $song->id)
+                        ),
+                    ));
+
+                    if (!empty($contiene)) {
+                       $json = $this->response(array(
+                            'code' => 400,
+                            'message' => 'La cancion ya existe en esta lista',
+                            'data' => null
+                        ));
+                       return $json;
+                    }
+                    else
+                    {
+                        $add = new Model_Contiene();
+                        $add->id_lista = $list->id;
+                        $add->id_cancion = $song->id;
+                        $add->save();
                         $json = $this->response(array(
-                            'code' => 201,
-                            'message' => 'cancion reproducida',
+                           'code' => 202,
+                           'message' => 'cancion añadida',
                             'data' => null
                         ));
+
                         return $json;
                     }
                 }
@@ -338,12 +385,13 @@ class Controller_Songs extends Controller_Rest
 
                 return $json;
             }
-        }
+        } 
         catch (Exception $e) 
         {
             $json = $this->response(array(
-                'code' => 500,
+                'code' => 501,
                 'message' => $e->getMessage(),
+                'data' => null
             ));
 
             return $json;
