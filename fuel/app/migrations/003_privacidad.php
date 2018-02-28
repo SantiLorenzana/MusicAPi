@@ -9,11 +9,11 @@ class Privacidad
     {
         \DBUtil::create_table('privacidad', array(
             'id' => array('type' => 'int', 'constraint' => 11, 'auto_increment' => true),
-            'perfil' => array('type' => 'int', 'constraint' => 1),
-            'amigos' => array('type' => 'int', 'constraint' => 1),
-            'listas' => array('type' => 'int', 'constraint' => 1),
-            'notificaciones' => array('type' => 'int', 'constraint' => 1),
-            'ubicacion' => array('type' => 'int', 'constraint' => 1),
+            'perfil' => array('type' => 'int', 'constraint' => 10),
+            'amigos' => array('type' => 'int', 'constraint' => 10),
+            'listas' => array('type' => 'int', 'constraint' => 10),
+            'notificaciones' => array('type' => 'int', 'constraint' => 10),
+            'ubicacion' => array('type' => 'int', 'constraint' => 10),
             'id_usuario' => array('type' => 'int', 'constraint' => 11),
         ), array('id'), false, 'InnoDB', 'utf8_unicode_ci',
 		    array(

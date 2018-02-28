@@ -6,20 +6,20 @@ class Controller_Lists extends Controller_Rest
 {
     private $key = '53jDgdTf5efGH54efef978';
 
-    private function authorization($token)
+    private function Authorization($token)
     {
 
         $decoded = JWT::decode($token, $this->key, array('HS256'));
 
         $userId = $decoded->id;
 
-        $users = Model_Users::find('all', array(
+        $usuario = Model_Users::find('all', array(
                 'where' => array(
                     array('id', $userId)
                 ),
         ));
 
-        if ($users != null) {
+        if ($usuario != null) {
             return true;
         }
         else 

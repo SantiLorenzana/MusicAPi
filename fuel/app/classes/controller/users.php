@@ -13,13 +13,13 @@ class Controller_Users extends Controller_Rest
 
         $userId = $decoded->id;
 
-        $users = Model_users::find('all', array(
+        $usuario = Model_users::find('all', array(
                 'where' => array(
                     array('id', $userId)
                 ),
         ));
 
-        if ($users != null) {
+        if ($usuario != null) {
             return true;
         }
         else 
@@ -28,20 +28,21 @@ class Controller_Users extends Controller_Rest
         }
     }
 
-    public function post_configAdmin()
+    public function post_createAdmin()
     {
         try {
-            //Validar si hay usuarios
-            $users = Model_Users::find('all');
+            //Validar si hay usuarios si estan vacíos crea el usuario Administrador
+            $usuario = Model_users::find('all');
 
-            if (empty($users)) {
-                $user = new Model_Users();
-                $user->username = 'admin';
+            if (empty($usuario)) {
+                $user = new Model_users();
+                $user->usuario = 'admin';
                 $user->email = 'admin@admin.com';
-                $user->password = '1234';
-                $user->id_device = 0;
-                $user->coordenada_x = 0;
-                $user->coordenada_y = 0;
+                $user->contraseña = '1234';
+                $user->id_device = '0';
+                $user->coordenada_x = '0';
+                $user->coordenada_y = '0';
+                $user->ciudad = 'unknown';
                 $user->id_rol = 1;
                 $user->save();
                 $json = $this->response(array(
@@ -56,7 +57,7 @@ class Controller_Users extends Controller_Rest
             {
                 $json = $this->response(array(
                    'code' => 400,
-                   'message' => 'La API ya está configurada',
+                   'message' => 'Ya existe un administrador',
                     'data' => null
                 ));
             }
@@ -73,13 +74,13 @@ class Controller_Users extends Controller_Rest
         }
     }
 
-    public function get_loginWeb()
+    public function get_login()
     {
         try {
-            if ( ! isset($_GET['username']) or
-                 ! isset($_GET['password']) or
-                 $_GET['username'] == "" or
-                 $_GET['password'] == "") 
+            if ( ! isset($_GET['usuario']) or
+                 ! isset($_GET['contraseña']) or
+                 $_GET['usuario'] == "" or
+                 $_GET['contraseña'] == "") 
             {
                 $json = $this->response(array(
                     'code' => 402,
@@ -90,21 +91,21 @@ class Controller_Users extends Controller_Rest
                 return $json;
             }
 
-            $users = Model_users::find('first', array(
+            $usuario = Model_users::find('first', array(
                 'where' => array(
-                    array('username', $_GET['username']),
-                    array('password', $_GET['password'])
+                    array('usuario', $_GET['usuario']),
+                    array('contraseña', $_GET['contraseña'])
                 ),
             ));
             
             //Validación usuario
-            if (!empty($users)) {
-                if($users->id_rol == 1){
+            if (!empty($usuario)) {
+                if($usuario->id_rol == 1){
                    //Generar token
                     $token = array(
-                        'id'  => $users['id'],
-                        'username' => $_GET['username'],
-                        'password' => $_GET['password'],
+                        'id'  => $usuario['id'],
+                        'usuario' => $_GET['usuario'],
+                        'contraseña' => $_GET['contraseña'],
                     );
                 
                 $jwt = JWT::encode($token, $this->key);
@@ -114,7 +115,7 @@ class Controller_Users extends Controller_Rest
                         'message' => 'usuario logeado',
                         'data' => array(
                             'token' => $jwt,
-                            'username' => $token['username']   
+                            'usuario' => $token['usuario']   
                         )
                     ));
                 return $json;
@@ -150,91 +151,20 @@ class Controller_Users extends Controller_Rest
             return $json;
         }
     }
-
-    public function get_login()
-    {
-        try {
-            if ( ! isset($_GET['username']) or
-                 ! isset($_GET['password']) or
-                 $_GET['username'] == "" or
-                 $_GET['password'] == "") 
-            {
-                $json = $this->response(array(
-                    'code' => 402,
-                    'message' => 'parametros incorrectos/Los campos no pueden estar vacios',
-                    'data' => null
-                ));
-
-                return $json;
-            }
-
-            $users = Model_users::find('first', array(
-                'where' => array(
-                    array('username', $_GET['username']),
-                    array('password', $_GET['password'])
-                ),
-            ));
-            
-            //Validación usuario
-            if (!empty($users)) {
-               //Generar token
-                $token = array(
-                    'id'  => $users['id'],
-                    'username' => $users['username'],
-                    'password' => $users['password'],
-                    'id_device' => $users['id_device'],
-                    'coordenada_x' => $users['coordenada_x'],
-                    'coordenada_y' => $users['coordenada_y']
-                );
-            
-            $jwt = JWT::encode($token, $this->key);
-
-            $json = $this->response(array(
-                    'code' => 201,
-                    'message' => 'usuario logeado',
-                    'data' => array(
-                        'token' => $jwt,
-                        'username' => $token['username']   
-                    )
-                ));
-            return $json;
-            }
-            else
-            {
-                $json = $this->response(array(
-                    'code' => 401,
-                    'message' => 'El usuario no existe o contraseña incorrecta',
-                    'data' => null
-                ));
-               return $json;
-            }
-        }
-        catch (Exception $e) 
-        {
-            $json = $this->response(array(
-                'code' => 501,
-                'message' => $e->getMessage(),
-                'data' => null
-            ));
-
-            return $json;
-        }
-    }
-    
     public function post_create()
     {
         try {
-            //Validar api configurada
+            //Validar el usuario adminsitrador
             $admin = Model_users::find('first', array(
                 'where' => array(
-                    array('username', 'admin'),
+                    array('usuario', 'admin'),
                 ),
             ));
             if(empty($admin))
             {
                 $json = $this->response(array(
                     'code' => 400,
-                    'message' => 'La API no está configurada',
+                    'message' => 'Falta el usuario administrador',
                     'data' => null
                 ));
 
@@ -242,14 +172,14 @@ class Controller_Users extends Controller_Rest
             }
 
             //Validar campos rellenos y nombre correcto
-            if ( ! isset($_POST['username']) or
+            if ( ! isset($_POST['usuario']) or
                  ! isset($_POST['email']) or
-                 ! isset($_POST['password']) or
-                 ! isset($_POST['repeatPassword']) or
-                 $_POST['username'] == "" or
+                 ! isset($_POST['contraseña']) or
+                 ! isset($_POST['repeatcontraseña']) or
+                 $_POST['usuario'] == "" or
                  $_POST['email'] == "" or
-                 $_POST['password'] == "" or
-                 $_POST['repeatPassword'] == "") 
+                 $_POST['contraseña'] == "" or
+                 $_POST['repeatcontraseña'] == "") 
             {
                 $json = $this->response(array(
                     'code' => 402,
@@ -260,27 +190,27 @@ class Controller_Users extends Controller_Rest
                 return $json;
             }
 
-            //Validar si hay usuarios
-            $users = Model_Users::find('all');
+            //busca usuarios
+            $usuario = Model_users::find('all');
 
             //Validar usuario no existe
-            $userName = Model_users::find('all', array(
+            $usuario = Model_users::find('all', array(
                 'where' => array(
-                    array('username', $_POST['username']),
+                    array('usuario', $_POST['usuario']),
                 ),
             ));
 
-            if (! empty($userName)) {
+            if (! empty($usuario)) {
                $json = $this->response(array(
                     'code' => 403,
-                    'message' => 'Ya existe un usuario con este username',
+                    'message' => 'Ya existe un usuario con este usuario',
                     'data' => null
                 ));
                return $json;
             }
 
             //Validar email no existe
-            $userEmail = Model_users::find('all', array(
+            $userEmail = Model_usuario::find('all', array(
                 'where' => array(
                     array('email', $_POST['email']),
                 ),
@@ -295,13 +225,13 @@ class Controller_Users extends Controller_Rest
                return $json;
             }
 
-            if ($_POST['password'] == $_POST['repeatPassword']) {
+            if ($_POST['contraseña'] == $_POST['repeatcontraseña']) {
                 
                 $input = $_POST;
-                $user = new Model_Users();
-                $user->username = $input['username'];
+                $user = new Model_usuario();
+                $user->usuario = $input['usuario'];
                 $user->email = $input['email'];
-                $user->password = $input['password'];
+                $user->contraseña = $input['contraseña'];
                 $user->id_device = $input['id_device'];
                 $user->coordenada_x = $input['coordenada_x'];
                 $user->coordenada_y = $input['coordenada_y'];
@@ -340,7 +270,7 @@ class Controller_Users extends Controller_Rest
         }
     }
 
-    public function get_users()
+    public function get_usuario()
     {
         try {
             $token = apache_request_headers()['Authorization'];
@@ -350,12 +280,12 @@ class Controller_Users extends Controller_Rest
                 $decoded = JWT::decode($token, $this->key, array('HS256'));
                 $id = $decoded->id;
 
-                $users = Model_Users::find('all');
+                $usuario = Model_usuario::find('all');
 
                 $json = $this->response(array(
                     'code' => 200,
                     'message' => 'Usuarios mostrados',
-                    'data' => $users
+                    'data' => $usuario
                 ));
 
                 return $json;
@@ -392,7 +322,7 @@ class Controller_Users extends Controller_Rest
                
                 $decoded = JWT::decode($token, $this->key, array('HS256'));
                 $id = $decoded->id;
-                $user = Model_Users::find($id);
+                $user = Model_users::find($id);
 
                 if($user->id_rol != 1)
                 {
@@ -438,110 +368,7 @@ class Controller_Users extends Controller_Rest
             return $json;
         }
     }
-
-    public function get_checkEmail()
-    {
-        if (! isset($_GET['email']) or $_GET['email'] == "")
-            {
-                $json = $this->response(array(
-                    'code' => 402,
-                    'message' => 'parametros incorrectos/Los campos no pueden estar vacios',
-                    'data' => null
-                ));
-                return $json;
-            }
-
-            //Validar usuario no existe
-            $user = Model_users::find('all', array(
-                'where' => array(
-                    array('email', $_GET['email']),
-                ),
-            ));
-
-            if (empty($user)) {
-               $json = $this->response(array(
-                    'code' => 403,
-                    'message' => 'No existe un usuario con este correo',
-                    'data' => null
-                ));
-                return $json;
-            } else {
-                $json = $this->response(array(
-                    'code' => 200,
-                    'message' => 'El correo existe',
-                    'data' => $user
-                ));
-                return $json;
-            }
-        }
-
-    public function post_recoverPassword()
-    {
-        try {
-            //Validar campos rellenos y nombre correcto
-            if (! isset($_POST['email']) or $_POST['email'] == "" or 
-                ! isset($_POST['password']) or $_POST['password'] == "" or
-                ! isset($_POST['repeatPassword']) or $_POST['repeatPassword'] == "")
-            {
-                $json = $this->response(array(
-                    'code' => 402,
-                    'message' => 'parametros incorrectos/Los campos no pueden estar vacios',
-                    'data' => null
-                ));
-                return $json;
-            }
-
-            //Validar usuario no existe
-            $user = Model_users::find('first', array(
-                'where' => array(
-                    array('email', $_POST['email']),
-                ),
-            ));
-
-            if (empty($user)) {
-               $json = $this->response(array(
-                    'code' => 403,
-                    'message' => 'No existe un usuario con este correo',
-                    'data' => null
-                ));
-               return $json;
-            }
-
-            if ($_POST['password'] == $_POST['repeatPassword']) {
-                $user->password = $_POST['password'];
-                $user->save();
-                $json = $this->response(array(
-                    'code' => 201,
-                    'message' => 'Contraseña cambiada',
-                    'data' => null
-                ));
-
-                return $json;
-            }
-            else
-            {
-                $json = $this->response(array(
-                    'code' => 404,
-                    'message' => 'Las contraseñas no coinciden',
-                    'data' => null
-                ));
-               return $json;
-            }
-
-        } 
-        catch (Exception $e) 
-        {
-            $json = $this->response(array(
-                'code' => 502,
-                'message' => $e->getMessage(),
-                'data' => $user
-            ));
-
-            return $json;
-        }
-    }
-
-    public function post_modify()
+    public function post_modifyuser()
     {
         try
         {
@@ -551,11 +378,11 @@ class Controller_Users extends Controller_Rest
                
                 $decoded = JWT::decode($token, $this->key, array('HS256'));
                 $id = $decoded->id;
-                $user = Model_Users::find($id);
+                $user = Model_users::find($id);
 
-                if (!empty($_POST['foto_perfil']) and !empty($_POST['password']) or
-                    !empty($_POST['foto_perfil']) and isset($_POST['password']) or
-                    isset($_POST['foto_perfil']) and !empty($_POST['password']))
+                if (!empty($_POST['foto_perfil']) and !empty($_POST['contraseña']) or
+                    !empty($_POST['foto_perfil']) and isset($_POST['contraseña']) or
+                    isset($_POST['foto_perfil']) and !empty($_POST['contraseña']))
                 {
                     //Guardar foto
                     if (isset($_POST['foto_perfil']) && !empty($_POST['foto_perfil']))
@@ -564,9 +391,9 @@ class Controller_Users extends Controller_Rest
                         $user->save();
                     }
                     //Guardar contraseña
-                    if (isset($_POST['password']) && !empty($_POST['password']))
+                    if (isset($_POST['contraseña']) && !empty($_POST['contraseña']))
                     {
-                        $user->password = $_POST['password'];
+                        $user->contraseña = $_POST['contraseña'];
                         $user->save();
                     }
                     
@@ -613,71 +440,5 @@ class Controller_Users extends Controller_Rest
         }
     }
 
-    public function get_getNearUsers()
-    {
-     try
-        {
-            $token = apache_request_headers()['Authorization'];
-
-            if ($this->authorization($token) == true){
-               
-                $decoded = JWT::decode($token, $this->key, array('HS256'));
-                $id = $decoded->id;
-                
-                $users = Model_Users::find('all', array(
-                'where' => array(
-                    array('coordenada_x', $decoded->coordenada_x),
-                    array('coordenada_y', $decoded->coordenada_y),
-                    //array('id', $id),
-                ),
-            ));
-                if(!empty($users))
-                {
-                    $nearUsers;
-
-                    foreach ($users as $key => $value) {
-                        if($id != $value->id)
-                        {
-                            $nearUsers[] = array("username" => $value->username);
-                        }
-                    }
-                    $json = $this->response(array(
-                        'code' => 200,
-                        'message' => 'usuarios encontrados:',
-                        'data' => $nearUsers
-                    ));
-                    return $json;
-                }
-                else
-                {
-                    $json = $this->response(array(
-                        'code' => 400,
-                        'message' => 'No hay usuarios cercanos',
-                        'data' => $decoded->coordenada_x
-                    ));
-                    return $json;
-                }
-            }
-            else
-            {
-                $json = $this->response(array(
-                    'code' => 400,
-                    'message' => 'Token incorrecto, no tienes permiso',
-                    'data' => null
-                ));
-
-                return $json;
-            }
-        } 
-        catch (Exception $e) 
-        {
-            $json = $this->response(array(
-                'code' => 501,
-                'message' => $e->getMessage(),
-                'data' => null
-            ));
-
-            return $json;
-        }    
-    }
+    
 }
