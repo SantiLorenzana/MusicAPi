@@ -1,444 +1,329 @@
 <?php 
+use \Firebase\JWT\JWT;
 
-use Firebase\JWT\JWT;
-
-class Controller_Users extends Controller_Rest
-{
-    private $key = '53jDgdTf5efGH54efef978';
-
-    private function authorization($token)
-    {
-
-        $decoded = JWT::decode($token, $this->key, array('HS256'));
-
-        $userId = $decoded->id;
-
-        $usuario = Model_users::find('all', array(
-                'where' => array(
-                    array('id', $userId)
-                ),
-        ));
-
-        if ($usuario != null) {
-            return true;
-        }
-        else 
-        {
-           return false; 
-        }
-    }
-
-    public function post_createAdmin()
+class Controller_Users extends Controller_Main 
+{   
+    public function post_create()
     {
         try {
-            //Validar si hay usuarios si estan vacíos crea el usuario Administrador
-            $usuario = Model_users::find('all');
-
-            if (empty($usuario)) {
-                $user = new Model_users();
-                $user->usuario = 'admin';
-                $user->email = 'admin@admin.com';
-                $user->contraseña = '1234';
-                $user->id_device = '0';
-                $user->coordenada_x = '0';
-                $user->coordenada_y = '0';
-                $user->ciudad = 'unknown';
-                $user->id_rol = 1;
-                $user->save();
-                $json = $this->response(array(
-                   'code' => 200,
-                   'message' => 'Administrador creado',
-                    'data' => null
-                ));
-
-            return $json;
-            }
-            else
+            if ( ! isset($_POST['name'])) 
             {
                 $json = $this->response(array(
-                   'code' => 400,
-                   'message' => 'Ya existe un administrador',
+                    'code' => 400,
+                    'message' => 'parametro incorrecto, se necesita que el parametro se llame name',
                     'data' => null
                 ));
+
+                return $json;
             }
+
+            if ( ! isset($_POST['pass'])) 
+            {
+                $json = $this->response(array(
+                    'code' => 400,
+                    'message' => 'parametro incorrecto, se necesita que el parametro se llame pass',
+                    'data' => null
+                ));
+
+                return $json;
+            }
+
+            if ( ! isset($_POST['email'])) 
+            {
+                $json = $this->response(array(
+                    'code' => 400,
+                    'message' => 'parametro incorrecto, se necesita que el parametro email',
+                    'data' => null
+                ));
+
+                return $json;
+            }
+
+            if ( ! isset($_POST['rol'])) 
+            {
+                $json = $this->response(array(
+                    'code' => 400,
+                    'message' => 'parametro incorrecto, se necesita que el parametro rol',
+                    'data' => null
+                ));
+
+                return $json;
+            }
+
+            $checkUsername = Model_Users::find('all', ['where' => ['name' => $_POST['name']]]);
+			
+            $checkEmail = Model_Users::find('all', ['where' => ['email' => $_POST['email']]]);
+
+			$boolTested;
+
+	        if ($checkUsername == null && $checkEmail == null){
+	        	$boolTested = false;
+	        }else{
+	        	$boolTested = true;
+	        }
+
+            if ($boolTested == false){
+	            $input = $_POST;
+	            $user = new Model_Users();
+	            $user->name = $input['name'];
+	            $user->pass = $input['pass'];
+	            $user->email = $input['email'];
+                $user->id_rol = $input['rol'];
+	            $user->save();
+
+                $systemListListened = new Model_List();
+                $systemListListened->nameList = 'songsListened';
+                $systemListListened->id_user = $user->id;
+                $systemListListened->systemList = 0;
+                $systemListListened->save();
+                
+                $systemListLast = new Model_List();
+                $systemListLast->nameList = 'lastListened';
+                $systemListLast->id_user = $user->id;
+                $systemListLast->systemList = 1;
+                $systemListLast->save();
+
+	            $json = $this->response(array(
+	                'code' => 201,
+	                'message' => 'usuario creado',
+	                'data' => $user
+	            ));
+
+	            return $json;
+            }else{
+            	$json = $this->response(array(
+	                'code' => 401,
+	                'message' => 'el usuario ya existe',
+                    'data' => null
+	            ));
+	            return $json;
+            }
+
         } 
         catch (Exception $e) 
         {
             $json = $this->response(array(
-                'code' => 502,
-                'message' => $e->getMessage(),
+                'code' => 500,
+                'message' => 'error interno del servidor',
                 'data' => null
             ));
 
             return $json;
-        }
+        }        
+    }
+
+    public function post_modify()
+    {
+    	try {
+	        if ( ! isset($_POST['pass'])) 
+	        {
+	            $json = $this->response(array(
+	                'code' => 400,
+	                'message' => 'parametro incorrecto, se necesita que el parametro se llame pass',
+	                'data' => null
+	            ));
+
+	            return $json;
+	        }
+
+	        $input = $_POST;
+	        $idUser = self::checkToken();
+	        $user = Model_Users::find($idUser);
+	        $user->pass = $_POST['pass'];
+	        $user->save();
+
+	        $json = $this->response(array(
+	            'code' => 200,
+	            'message' => 'contraseña modificada',
+	            'data' => $user
+	        ));
+
+	        return $json;   
+	    }
+	    catch (Exception $e) 
+        {
+            $json = $this->response(array(
+                'code' => 500,
+                'message' => 'error interno del servidor',
+                'data' => null
+            ));
+
+            return $json;
+        }      
     }
 
     public function get_login()
     {
         try {
-            if ( ! isset($_GET['usuario']) or
-                 ! isset($_GET['contraseña']) or
-                 $_GET['usuario'] == "" or
-                 $_GET['contraseña'] == "") 
+            if ( ! isset($_GET['name'])) 
             {
                 $json = $this->response(array(
-                    'code' => 402,
-                    'message' => 'parametros incorrectos/Los campos no pueden estar vacios',
+                    'code' => 400,
+                    'message' => 'parametro incorrecto, se necesita que el parametro se name',
                     'data' => null
                 ));
 
                 return $json;
             }
 
-            $usuario = Model_users::find('first', array(
-                'where' => array(
-                    array('usuario', $_GET['usuario']),
-                    array('contraseña', $_GET['contraseña'])
-                ),
-            ));
-            
-            //Validación usuario
-            if (!empty($usuario)) {
-                if($usuario->id_rol == 1){
-                   //Generar token
-                    $token = array(
-                        'id'  => $usuario['id'],
-                        'usuario' => $_GET['usuario'],
-                        'contraseña' => $_GET['contraseña'],
-                    );
-                
-                $jwt = JWT::encode($token, $this->key);
-
-                $json = $this->response(array(
-                        'code' => 201,
-                        'message' => 'usuario logeado',
-                        'data' => array(
-                            'token' => $jwt,
-                            'usuario' => $token['usuario']   
-                        )
-                    ));
-                return $json;
-                }
-                else
-                {
-                    $json = $this->response(array(
-                        'code' => 401,
-                        'message' => 'Acceso denegado. Debes acceder con un usuario administrador',
-                        'data' => null  
-                    ));
-                return $json;
-                }
-            }
-            else
+            if ( ! isset($_GET['pass'])) 
             {
+                $json = $this->response(array(
+                    'code' => 400,
+                    'message' => 'parametro incorrecto, se necesita que el parametro se llame pass',
+                    'data' => null
+                ));
+
+                return $json;
+            }
+
+            $users = Model_Users::find('all', ['where' => ['name' => $_GET['name'], 'pass' => $_GET['pass']]]);
+
+            foreach ($users as $key => $value) {
+                $id = $value->id;
+            }
+
+            if ($users == null){
                 $json = $this->response(array(
                     'code' => 401,
-                    'message' => 'El usuario no existe o contraseña incorrecta',
+                    'message' => 'usuario o contraseña incorrecto',
                     'data' => null
                 ));
-               return $json;
-            }
-        }
-        catch (Exception $e) 
-        {
-            $json = $this->response(array(
-                'code' => 501,
-                'message' => $e->getMessage(),
-                'data' => null
-            ));
-
-            return $json;
-        }
-    }
-    public function post_create()
-    {
-        try {
-            //Validar el usuario adminsitrador
-            $admin = Model_users::find('first', array(
-                'where' => array(
-                    array('usuario', 'admin'),
-                ),
-            ));
-            if(empty($admin))
-            {
-                $json = $this->response(array(
-                    'code' => 400,
-                    'message' => 'Falta el usuario administrador',
-                    'data' => null
-                ));
-
                 return $json;
-            }
-
-            //Validar campos rellenos y nombre correcto
-            if ( ! isset($_POST['usuario']) or
-                 ! isset($_POST['email']) or
-                 ! isset($_POST['contraseña']) or
-                 ! isset($_POST['repeatcontraseña']) or
-                 $_POST['usuario'] == "" or
-                 $_POST['email'] == "" or
-                 $_POST['contraseña'] == "" or
-                 $_POST['repeatcontraseña'] == "") 
-            {
+            }else{
+            	$token = self::createToken($_GET['name'],$_GET['pass'],$id);  
                 $json = $this->response(array(
-                    'code' => 402,
-                    'message' => 'parametros incorrectos/Los campos no pueden estar vacios',
-                    'data' => null
+                    'code' => 201,
+                    'message' => 'Logeado',
+                    'data' => ["token" => $token]           
                 ));
-
-                return $json;
-            }
-
-            //busca usuarios
-            $usuario = Model_users::find('all');
-
-            //Validar usuario no existe
-            $usuario = Model_users::find('all', array(
-                'where' => array(
-                    array('usuario', $_POST['usuario']),
-                ),
-            ));
-
-            if (! empty($usuario)) {
-               $json = $this->response(array(
-                    'code' => 403,
-                    'message' => 'Ya existe un usuario con este usuario',
-                    'data' => null
-                ));
-               return $json;
-            }
-
-            //Validar email no existe
-            $userEmail = Model_usuario::find('all', array(
-                'where' => array(
-                    array('email', $_POST['email']),
-                ),
-            ));
-
-            if (! empty($userEmail)) {
-               $json = $this->response(array(
-                    'code' => 404,
-                    'message' => 'Ya existe un usuario con este email',
-                    'data' => null
-                ));
-               return $json;
-            }
-
-            if ($_POST['contraseña'] == $_POST['repeatcontraseña']) {
-                
-                $input = $_POST;
-                $user = new Model_usuario();
-                $user->usuario = $input['usuario'];
-                $user->email = $input['email'];
-                $user->contraseña = $input['contraseña'];
-                $user->id_device = $input['id_device'];
-                $user->coordenada_x = $input['coordenada_x'];
-                $user->coordenada_y = $input['coordenada_y'];
-                $user->id_rol = 2;
-                $user->save();
-                $json = $this->response(array(
-                   'code' => 202,
-                   'message' => 'usuario creado',
-                    'data' => null
-                ));
-
-            return $json;
-            }
-            else
-            {
-                $json = $this->response(array(
-                    'code' => 405,
-                    'message' => 'Las contraseñas no coinciden',
-                    'data' => null
-                ));
-               return $json;
-            }
-
-            
-
-        } 
-        catch (Exception $e) 
-        {
-            $json = $this->response(array(
-                'code' => 502,
-                'message' => $e->getMessage(),
-                'data' => null
-            ));
-
-            return $json;
-        }
-    }
-
-    public function get_usuario()
-    {
-        try {
-            $token = apache_request_headers()['Authorization'];
-
-            if ($this->authorization($token) == true){
-               
-                $decoded = JWT::decode($token, $this->key, array('HS256'));
-                $id = $decoded->id;
-
-                $usuario = Model_usuario::find('all');
-
-                $json = $this->response(array(
-                    'code' => 200,
-                    'message' => 'Usuarios mostrados',
-                    'data' => $usuario
-                ));
-
-                return $json;
-
-            }
-            else
-            {
-                $json = $this->response(array(
-                    'code' => 400,
-                    'message' => 'Token incorrecto, no tienes permiso'
-                ));
-
-                return $json;
+                return $json;  
             }
         } 
         catch (Exception $e) 
         {
             $json = $this->response(array(
                 'code' => 500,
-                'message' => $e->getMessage(),
+                'message' => 'error interno del servidor',
+                'data' => null
             ));
 
             return $json;
-        }
+        }                       
+    }
+
+    public function get_recoverPass()
+    {
+        try {
+            if ( ! isset($_GET['email'])) 
+            {
+                $json = $this->response(array(
+                    'code' => 400,
+                    'message' => 'parametro incorrecto, se necesita que el parametro email',
+                    'data' => null
+                ));
+
+                return $json;
+            }
+
+            if ( ! isset($_GET['name'])) 
+            {
+                $json = $this->response(array(
+                    'code' => 400,
+                    'message' => 'parametro incorrecto, se necesita que el parametro se llame name',
+                    'data' => null
+                ));
+
+                return $json;
+            }
+
+            $users = Model_Users::find('all', ['where' => ['email' => $_GET['email'], 'name' => $_GET['name']]]);
+
+            foreach ($users as $key => $value) {
+                $id = $value->id;
+            }
+
+            if ($users == null){
+                $json = $this->response(array(
+                    'code' => 401,
+                    'message' => 'usuario o email incorrecto',
+                    'data' => null
+                ));
+                return $json;
+            }else{
+                $token = self::createToken($_GET['name'],"NotDefined",$id);
+                $json = $this->response(array(
+                    'code' => 201,
+                    'message' => 'Logeado',
+                    'data' => ['token'=>$token]           
+                ));
+                return $json;  
+            }
+        } 
+        catch (Exception $e) 
+        {
+            $json = $this->response(array(
+                'code' => 500,
+                'message' => 'error interno del servidor',
+                'data' => null
+            ));
+
+            return $json;
+        }                       
+    }
+
+
+    public function get_users()
+    {
+    	try{
+	        $users = Model_Users::find('all', ['select' => 'name']);
+
+	        foreach ($users as $key => $value) {
+	                $show[] = $value->name;
+	                $showID[] = $value->id;
+	        }
+	        $json = $this->response(array(
+	            'name' => $show,
+	            'id' => $showID
+	        ));
+
+	        return $json; 
+        } 
+        catch (Exception $e) 
+        {
+            $json = $this->response(array(
+                'code' => 500,
+                'message' => 'error interno del servidor',
+            ));
+
+            return $json;
+        }  
     }
 
     public function post_delete()
     {
-        try
-        {
-            $token = apache_request_headers()['Authorization'];
+        try{
+        	$idABorrar = self::checkToken();
+            $user = Model_Users::find($idABorrar);
+            $userName = $user->name;
+            $user->delete();
 
-            if ($this->authorization($token) == true){
-               
-                $decoded = JWT::decode($token, $this->key, array('HS256'));
-                $id = $decoded->id;
-                $user = Model_users::find($id);
+            $json = $this->response(array(
+                'code' => 200,
+                'message' => 'usuario borrado',
+                'data' => $userName
+            ));
 
-                if($user->id_rol != 1)
-                {
-                    $user->delete();
-                    $json = $this->response(array(
-                        'code' => 201,
-                        'message' => 'usuario borrado',
-                        'data' => null
-                    ));
-                    return $json;
-                }
-                else
-                {
-                    $json = $this->response(array(
-                        'code' => 400,
-                        'message' => 'No puede borrarse el usuario administrador',
-                        'data' => null
-                    ));
-                    return $json;
-                }
-                
-            
-            }
-            else
-            {
-                $json = $this->response(array(
-                    'code' => 401,
-                    'message' => 'Token incorrecto, no tienes permiso',
-                    'data' => null
-                ));
-
-                return $json;
-            }
+            return $json;
         } 
         catch (Exception $e) 
         {
             $json = $this->response(array(
-                'code' => 501,
-                'message' => $e->getMessage(),
-                'data' => null
+                'code' => 500,
+                'message' => 'error interno del servidor',
             ));
 
             return $json;
         }
     }
-    public function post_modifyuser()
-    {
-        try
-        {
-            $token = apache_request_headers()['Authorization'];
-
-            if ($this->authorization($token) == true){
-               
-                $decoded = JWT::decode($token, $this->key, array('HS256'));
-                $id = $decoded->id;
-                $user = Model_users::find($id);
-
-                if (!empty($_POST['foto_perfil']) and !empty($_POST['contraseña']) or
-                    !empty($_POST['foto_perfil']) and isset($_POST['contraseña']) or
-                    isset($_POST['foto_perfil']) and !empty($_POST['contraseña']))
-                {
-                    //Guardar foto
-                    if (isset($_POST['foto_perfil']) && !empty($_POST['foto_perfil']))
-                    {
-                        $user->foto_perfil = $_POST['foto_perfil'];
-                        $user->save();
-                    }
-                    //Guardar contraseña
-                    if (isset($_POST['contraseña']) && !empty($_POST['contraseña']))
-                    {
-                        $user->contraseña = $_POST['contraseña'];
-                        $user->save();
-                    }
-                    
-
-                    $json = $this->response(array(
-                    'code' => 200,
-                    'message' => 'Usuario modificado correctamente',
-                    'data' => $user
-                    ));
-
-                    return $json;
-                }
-                else
-                {
-                $json = $this->response(array(
-                    'code' => 400,
-                    'message' => 'Todos los parametros vacios',
-                    'data' => $user
-                ));
-
-                return $json;
-                }
-            }
-            else
-            {
-                $json = $this->response(array(
-                    'code' => 401,
-                    'message' => 'Token incorrecto, no tienes permiso',
-                    'data' => null
-                ));
-
-                return $json;
-            }
-        } 
-        catch (Exception $e) 
-        {
-            $json = $this->response(array(
-                'code' => 501,
-                'message' => $e->getMessage(),
-                'data' => null
-            ));
-
-            return $json;
-        }
-    }
-
-    
 }
