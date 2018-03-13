@@ -3,9 +3,11 @@ use \Firebase\JWT\JWT;
 
 class Controller_Canciones extends Controller_Main 
 {   
+    //crear la canción
     public function post_create()
     {
         try {
+            //primero busca los tres parámetros para cerciorarse
             if ( ! isset($_POST['name'])) 
             {
                 $json = $this->response(array(
@@ -39,16 +41,18 @@ class Controller_Canciones extends Controller_Main
                 return $json;
             }
 
-
+            //checkea el modelo igualando la url que enviamos a las ya existentes
             $check = Model_Cancion::find('all', ['where' => ['urlSong' => $_POST['urlS']]]);
             
             $boolTested;
-
+            //si no existe
             if ($check == null){
                 $boolTested = false;
             }else{
+                //si esxiste
                 $boolTested = true;
             }
+            //si no existe crea la cancion usando el modelo dándole los atributos que hemos introducido y despues los guarda
 
             if ($boolTested == false){
                 $input = $_POST;
@@ -88,6 +92,7 @@ class Controller_Canciones extends Controller_Main
         }        
     }
 
+    //modificar una cancion ya existente
     public function post_modify()
     {
     	try{
@@ -123,7 +128,7 @@ class Controller_Canciones extends Controller_Main
 
 	            return $json;
 	        }
-
+            //busca la cancion que le enviamos mediante el id y cambia los parámetros de name y url despues gurda
 	        $input = $_POST;
 	        $song = Model_Cancion::find($input['idsong']);
 	        $song->nameSong = $input['nameSong'];
@@ -161,10 +166,11 @@ class Controller_Canciones extends Controller_Main
 
         return $json; 
     }
-
+//borrar una canción
     public function post_delete()
     {
     	try{
+            //busca el parámetro id de la camnción
 	    	if ( ! isset($_POST['id'])) 
 		        {
 	            $json = $this->response(array(
@@ -175,12 +181,13 @@ class Controller_Canciones extends Controller_Main
 
 	            return $json;
 	        }else{
+                //checkea el id enviado y si existe la borra
 			    $song = Model_Cancion::find($_POST['id']);
 			    $song->delete();
 
 			    $json = $this->response(array(
 			        'code' => 200,
-			        'message' => 'cancion borrado',
+			        'message' => 'cancion borrada',
 			        'name' => $song
 			    ));
 

@@ -1,4 +1,4 @@
-php<?php 
+<?php 
 use \Firebase\JWT\JWT;
 
 class Controller_Contienen extends Controller_Main
@@ -6,6 +6,7 @@ class Controller_Contienen extends Controller_Main
     public function post_addsong()
     {
         try {
+            //busca si están definidops los parámetros idcancion y la id lista de la cancion
             if ( ! isset($_POST['idCancion'])) 
             {
                 $json = $this->response(array(
@@ -25,7 +26,7 @@ class Controller_Contienen extends Controller_Main
 
                 return $json;
             }
-
+            //envía la cancion con los parámetros y le añade un tiempo/dia de creacion despues guarda los datos en la bd
             $input = $_POST;
             $add = new Model_Contiene();
             $add->id_cancion = $input['idCancion'];
@@ -51,34 +52,7 @@ class Controller_Contienen extends Controller_Main
             return $json;
         }        
     }
-
-    public function get_contieneAll(){
-    	$contiene = Model_Contiene::find('all');
-
-        foreach ($contiene as $key => $value) {
-                $idL[] = $value->id_lista;
-                $idC[] = $value->id_cancion;
-        }
-
-        foreach ($idL as $key => $value) {
-        		$name = Model_List::find($value, ['select' => 'nameList']);
-                $nameL[] = $name;
-        }
-
-        foreach ($idC as $key => $value) {
-        		$name = Model_Cancion::find($value, ['select' => 'nameSong']);
-                $nameC[] = $name;
-        }
-        
-        $json = $this->response(array(
-            'code' => 201,
-            'message' => 'Datos devueltos',
-            'data' => ['canciones' => $nameC, 'listas' => $nameL]
-        ));
-
-        return $json;  
-    }
-
+    //devolver una lista
     public function get_singleList(){
 
             if ( ! isset($_GET['idLista'])) 
@@ -91,17 +65,17 @@ class Controller_Contienen extends Controller_Main
             }
 
             $contiene = Model_Contiene::find('all', ['where' => ['id_lista' => $_GET['idLista']]]);
-            
+        
 	        foreach ($contiene as $key => $value) {
 	                $idL[] = $value->id_lista;
 	                $idC[] = $value->id_cancion;
 	        }
-
+            //busca la lista por id
 	        foreach ($idL as $key => $value) {
 	        		$name = Model_List::find($value, ['select' => 'nameList']);
 	                $nameL[] = $name;
 	        }
-
+        //busca las canciones por id cancion asignadas a esta lista
 	        foreach ($idC as $key => $value) {
 	        		$name = Model_Cancion::find($value, ['select' => 'nameSong']);
 	                $nameC[] = $name;
@@ -109,7 +83,7 @@ class Controller_Contienen extends Controller_Main
 	        
 	        $json = $this->response(array(
 	            'code' => 201,
-	            'message' => 'Datos devueltos',
+	            'message' => 'Datos devueltos correctamente',
 	            'data' => ['canciones' => $nameC, 'listas' => $nameL]
 	        ));
 

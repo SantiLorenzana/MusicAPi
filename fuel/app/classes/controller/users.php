@@ -6,6 +6,8 @@ class Controller_Users extends Controller_Main
     public function post_create()
     {
         try {
+            //isset nos dice si la variable está definida(en este caso el parametro del array post name) isset devuelve valores true o false
+            //en este caso si el name no está definido nos dará el code 400
             if ( ! isset($_POST['name'])) 
             {
                 $json = $this->response(array(
@@ -49,19 +51,20 @@ class Controller_Users extends Controller_Main
 
                 return $json;
             }
-
+            //comparacion de nombres por si hay alguno igual en la bd gracias al modelo
             $checkUsername = Model_Users::find('all', ['where' => ['name' => $_POST['name']]]);
-			
+			//comparacion de mail por si hay alguno igual en la bd
             $checkEmail = Model_Users::find('all', ['where' => ['email' => $_POST['email']]]);
-
+            //testeo de la comprobacion
 			$boolTested;
 
 	        if ($checkUsername == null && $checkEmail == null){
 	        	$boolTested = false;
 	        }else{
+                //si es true no hace nada
 	        	$boolTested = true;
 	        }
-
+            //si es false entra en el if creando el user
             if ($boolTested == false){
 	            $input = $_POST;
 	            $user = new Model_Users();
@@ -70,18 +73,6 @@ class Controller_Users extends Controller_Main
 	            $user->email = $input['email'];
                 $user->id_rol = $input['rol'];
 	            $user->save();
-
-                $systemListListened = new Model_List();
-                $systemListListened->nameList = 'songsListened';
-                $systemListListened->id_user = $user->id;
-                $systemListListened->systemList = 0;
-                $systemListListened->save();
-                
-                $systemListLast = new Model_List();
-                $systemListLast->nameList = 'lastListened';
-                $systemListLast->id_user = $user->id;
-                $systemListLast->systemList = 1;
-                $systemListLast->save();
 
 	            $json = $this->response(array(
 	                'code' => 201,
@@ -100,6 +91,7 @@ class Controller_Users extends Controller_Main
             }
 
         } 
+        // En caso de que haya conflictos con la conexion del servidor
         catch (Exception $e) 
         {
             $json = $this->response(array(
@@ -111,7 +103,7 @@ class Controller_Users extends Controller_Main
             return $json;
         }        
     }
-
+//funcion de modificación de datos
     public function post_modify()
     {
     	try {
@@ -125,13 +117,18 @@ class Controller_Users extends Controller_Main
 
 	            return $json;
 	        }
-
+            //recogemos los datos del input, en este caso la nueva pass
 	        $input = $_POST;
+            //asignación del token al usuario
 	        $idUser = self::checkToken();
+            //busca el usuario asignado a la id
 	        $user = Model_Users::find($idUser);
+            //envía la pass nueva
 	        $user->pass = $_POST['pass'];
+            // y se guardan los datos
 	        $user->save();
 
+            //Una vez hecho se envía el code 200 en caso afirmativo
 	        $json = $this->response(array(
 	            'code' => 200,
 	            'message' => 'contraseña modificada',
@@ -140,6 +137,7 @@ class Controller_Users extends Controller_Main
 
 	        return $json;   
 	    }
+        // en caso negativo
 	    catch (Exception $e) 
         {
             $json = $this->response(array(
@@ -151,7 +149,7 @@ class Controller_Users extends Controller_Main
             return $json;
         }      
     }
-
+    //funcion de login del usuario
     public function get_login()
     {
         try {
@@ -176,13 +174,13 @@ class Controller_Users extends Controller_Main
 
                 return $json;
             }
-
+            //busca en el modelo al user con los parámetros introducidos
             $users = Model_Users::find('all', ['where' => ['name' => $_GET['name'], 'pass' => $_GET['pass']]]);
-
+            //le asigna una id
             foreach ($users as $key => $value) {
                 $id = $value->id;
             }
-
+            //si no lo encuentra devuelve el 401
             if ($users == null){
                 $json = $this->response(array(
                     'code' => 401,
@@ -191,6 +189,7 @@ class Controller_Users extends Controller_Main
                 ));
                 return $json;
             }else{
+                // si por el contrario lo encuentra devuelve el code 201 de logueado y se le asigna un token, que es creado ahí, achacado a ese nombre y esa contraseña
             	$token = self::createToken($_GET['name'],$_GET['pass'],$id);  
                 $json = $this->response(array(
                     'code' => 201,
@@ -211,9 +210,11 @@ class Controller_Users extends Controller_Main
             return $json;
         }                       
     }
-
+    
+    //funcion para recuperar contraseña
     public function get_recoverPass()
     {
+        //primero compara que hay ese email y nombre en la bd
         try {
             if ( ! isset($_GET['email'])) 
             {
@@ -236,13 +237,13 @@ class Controller_Users extends Controller_Main
 
                 return $json;
             }
-
+            //si existe dentro de la bd trae de vuelta el name
             $users = Model_Users::find('all', ['where' => ['email' => $_GET['email'], 'name' => $_GET['name']]]);
 
             foreach ($users as $key => $value) {
                 $id = $value->id;
             }
-
+            // en caso de no existir ese nombre dentro de la bd
             if ($users == null){
                 $json = $this->response(array(
                     'code' => 401,
@@ -272,16 +273,18 @@ class Controller_Users extends Controller_Main
         }                       
     }
 
-
+//funcion para mostrar todos los usuarios
     public function get_users()
     {
     	try{
+            //recaba todos por el parametro name
 	        $users = Model_Users::find('all', ['select' => 'name']);
 
 	        foreach ($users as $key => $value) {
 	                $show[] = $value->name;
 	                $showID[] = $value->id;
 	        }
+            //introduce los valores encontrados en un array y lo devuelve como json al final
 	        $json = $this->response(array(
 	            'name' => $show,
 	            'id' => $showID
@@ -299,10 +302,11 @@ class Controller_Users extends Controller_Main
             return $json;
         }  
     }
-
+//funcion de borrado de usuario
     public function post_delete()
     {
         try{
+            //iguala el id que queremos borrar con el token actual que contiene los datos, los busca dentro del modelo y lo borra. 
         	$idABorrar = self::checkToken();
             $user = Model_Users::find($idABorrar);
             $userName = $user->name;
